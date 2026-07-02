@@ -3,6 +3,7 @@ module github.com/kumekay/discarica
 go 1.26.3
 
 require (
+	github.com/yuin/goldmark v1.8.2
 	golang.org/x/oauth2 v0.36.0
 	modernc.org/sqlite v1.53.0
 )

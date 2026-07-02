@@ -45,6 +45,11 @@ func New(cfg Config) http.Handler {
 	mux.Handle("DELETE /api/pages/{id}", s.withToken(s.handleDeletePage))
 	mux.Handle("PATCH /api/pages/{id}", s.withToken(s.handlePatchPage))
 
+	mux.Handle("GET /p/{id}", s.handlePrivate(false))
+	mux.Handle("GET /p/{id}/raw", s.handlePrivate(true))
+	mux.Handle("GET /pub/{id}", s.handlePublic(false))
+	mux.Handle("GET /pub/{id}/raw", s.handlePublic(true))
+
 	mux.HandleFunc("GET /login", s.handleLoginPage)
 	mux.HandleFunc("GET /auth/{provider}", s.handleAuthStart)
 	mux.HandleFunc("GET /auth/{provider}/callback", s.handleAuthCallback)
