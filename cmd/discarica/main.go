@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kumekay/discarica/internal/auth"
@@ -16,10 +17,16 @@ import (
 	"github.com/kumekay/discarica/internal/web"
 )
 
+// env reads a variable with surrounding whitespace trimmed — secrets pasted
+// into CI often carry a stray newline or space.
+func env(key string) string {
+	return strings.TrimSpace(os.Getenv(key))
+}
+
 func main() {
-	baseURL := cmp.Or(os.Getenv("BASE_URL"), "https://discarica.kumekay.com")
-	dbPath := cmp.Or(os.Getenv("DB_PATH"), "discarica.db")
-	addr := cmp.Or(os.Getenv("LISTEN_ADDR"), ":8080")
+	baseURL := cmp.Or(env("BASE_URL"), "https://discarica.kumekay.com")
+	dbPath := cmp.Or(env("DB_PATH"), "discarica.db")
+	addr := cmp.Or(env("LISTEN_ADDR"), ":8080")
 
 	st, err := store.Open(dbPath)
 	if err != nil {
@@ -29,11 +36,11 @@ func main() {
 	defer func() { _ = st.Close() }()
 
 	var providers []*auth.Provider
-	if id, secret := os.Getenv("GITHUB_CLIENT_ID"), os.Getenv("GITHUB_CLIENT_SECRET"); id != "" {
+	if id, secret := env("GITHUB_CLIENT_ID"), env("GITHUB_CLIENT_SECRET"); id != "" {
 		providers = append(providers, auth.GitHub(id, secret, baseURL+"/auth/github/callback"))
 	}
-	if id, secret := os.Getenv("GITEA_CLIENT_ID"), os.Getenv("GITEA_CLIENT_SECRET"); id != "" {
-		giteaURL := cmp.Or(os.Getenv("GITEA_URL"), "https://gitea.kumekay.com")
+	if id, secret := env("GITEA_CLIENT_ID"), env("GITEA_CLIENT_SECRET"); id != "" {
+		giteaURL := cmp.Or(env("GITEA_URL"), "https://gitea.kumekay.com")
 		providers = append(providers, auth.Gitea(giteaURL, id, secret, baseURL+"/auth/gitea/callback"))
 	}
 	if len(providers) == 0 {
