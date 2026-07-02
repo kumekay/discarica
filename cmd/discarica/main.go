@@ -24,7 +24,7 @@ func env(key string) string {
 }
 
 func main() {
-	baseURL := cmp.Or(env("BASE_URL"), "https://discarica.kumekay.com")
+	baseURL := cmp.Or(env("BASE_URL"), "http://localhost:8080")
 	dbPath := cmp.Or(env("DB_PATH"), "discarica.db")
 	addr := cmp.Or(env("LISTEN_ADDR"), ":8080")
 
@@ -40,8 +40,11 @@ func main() {
 		providers = append(providers, auth.GitHub(id, secret, baseURL+"/auth/github/callback"))
 	}
 	if id, secret := env("GITEA_CLIENT_ID"), env("GITEA_CLIENT_SECRET"); id != "" {
-		giteaURL := cmp.Or(env("GITEA_URL"), "https://gitea.kumekay.com")
-		providers = append(providers, auth.Gitea(giteaURL, id, secret, baseURL+"/auth/gitea/callback"))
+		if giteaURL := env("GITEA_URL"); giteaURL != "" {
+			providers = append(providers, auth.Gitea(giteaURL, id, secret, baseURL+"/auth/gitea/callback"))
+		} else {
+			slog.Warn("GITEA_CLIENT_ID set but GITEA_URL missing; gitea login disabled")
+		}
 	}
 	if len(providers) == 0 {
 		slog.Warn("no OAuth providers configured; browser login is unavailable")

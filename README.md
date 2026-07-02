@@ -101,6 +101,8 @@ go run ./cmd/discarica
 
 Register the OAuth apps with callback URLs
 `$BASE_URL/auth/github/callback` and `$BASE_URL/auth/gitea/callback`.
+Providers are optional — each is enabled when its credentials are set
+(Gitea also needs `GITEA_URL`). `BASE_URL` defaults to `http://localhost:8080`;
 `LISTEN_ADDR` (default `:8080`) and `MAX_UPLOAD_BYTES` (default 5 MiB) are
 also configurable.
 
