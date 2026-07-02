@@ -106,7 +106,7 @@ func TestMCPListTools(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]bool{"upload_page": false, "list_pages": false, "delete_page": false, "set_visibility": false}
+	want := map[string]bool{"upload_page": false, "list_pages": false, "read_page": false, "delete_page": false, "set_visibility": false}
 	for _, tool := range res.Tools {
 		if _, ok := want[tool.Name]; ok {
 			want[tool.Name] = true
@@ -146,6 +146,12 @@ func TestMCPUploadListDelete(t *testing.T) {
 	pages, _ := list["pages"].([]any)
 	if len(pages) != 1 {
 		t.Fatalf("expected 1 page, got %v", list)
+	}
+
+	// Another agent of the same user can read the content back.
+	read := e.callTool("read_page", map[string]any{"id": id})
+	if read["content"] != "# hello" || read["name"] != "Hello" {
+		t.Errorf("read_page: %v", read)
 	}
 
 	vis := e.callTool("set_visibility", map[string]any{"id": id, "public": false})

@@ -42,6 +42,7 @@ func New(cfg Config) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/pages", s.withToken(s.handleUploadPage))
 	mux.Handle("GET /api/pages", s.withToken(s.handleListPages))
+	mux.Handle("GET /api/pages/{id}", s.withToken(s.handleGetPage))
 	mux.Handle("DELETE /api/pages/{id}", s.withToken(s.handleDeletePage))
 	mux.Handle("PATCH /api/pages/{id}", s.withToken(s.handlePatchPage))
 

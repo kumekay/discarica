@@ -18,6 +18,7 @@ type pageResponse struct {
 	Public    bool      `json:"public"`
 	URL       string    `json:"url"`
 	RawURL    string    `json:"raw_url,omitempty"`
+	Content   string    `json:"content,omitempty"` // set only on single-page GET
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -87,6 +88,23 @@ func (s *server) handleListPages(w http.ResponseWriter, r *http.Request) {
 	for _, p := range pages {
 		resp = append(resp, s.pageResponse(p))
 	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// handleGetPage returns one of the caller's pages including its content, so
+// agents can read notes back (e.g. handover between agents of one user).
+func (s *server) handleGetPage(w http.ResponseWriter, r *http.Request) {
+	p, err := s.cfg.Store.PageByID(r.Context(), r.PathValue("id"))
+	if errors.Is(err, store.ErrNotFound) || (err == nil && p.UserID != currentUser(r).ID) {
+		jsonError(w, http.StatusNotFound, "page not found")
+		return
+	}
+	if err != nil {
+		jsonError(w, http.StatusInternalServerError, "load page")
+		return
+	}
+	resp := s.pageResponse(p)
+	resp.Content = string(p.Content)
 	writeJSON(w, http.StatusOK, resp)
 }
 

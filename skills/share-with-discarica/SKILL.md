@@ -1,13 +1,15 @@
 ---
 name: share-with-discarica
-description: Share HTML or Markdown files as web pages via discarica and get back a sharable link. Use when the user asks to share a report, publish a page, send someone an HTML/Markdown document, or get a link for a generated file.
+description: Share HTML or Markdown files as web pages via discarica and get back a sharable link, or read pages back (agent-to-agent handover notes). Use when the user asks to share a report, publish a page, send someone an HTML/Markdown document, get a link for a generated file, or leave/read notes for another agent.
 ---
 
 # Share pages with discarica
 
 discarica hosts HTML and Markdown pages behind unguessable links.
-Pages are **private** by default (viewing requires GitHub/Gitea login);
-**public** pages are viewable by anyone with the link.
+Pages are **private** by default (visible only to their owner after
+GitHub/Gitea login); **public** pages are viewable by anyone with the link.
+Private pages are readable back through the API, so they work as a notes /
+handover space between agents of the same user.
 
 ## Setup
 
@@ -44,6 +46,9 @@ original source. Private URLs use `/p/`, public ones `/pub/`.
 ```sh
 # List your pages
 curl -sf -H "Authorization: Bearer $DISCARICA_TOKEN" "$DISCARICA_URL/api/pages"
+
+# Read a page back, including its content (agent handover notes)
+curl -sf -H "Authorization: Bearer $DISCARICA_TOKEN" "$DISCARICA_URL/api/pages/{id}"
 
 # Flip visibility (the url changes between /p/ and /pub/)
 curl -sf -X PATCH -H "Authorization: Bearer $DISCARICA_TOKEN" \

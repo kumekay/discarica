@@ -59,20 +59,30 @@ func (s *server) loadPage(w http.ResponseWriter, r *http.Request) (store.Page, b
 	return p, true
 }
 
-// handlePrivate serves /p/{id} and /p/{id}/raw: session required, except that
-// anonymous hits on a now-public page bounce to its /pub/ URL.
+// handlePrivate serves /p/{id} and /p/{id}/raw. Private pages are visible to
+// their owner only; non-owners get 404 so existence is not leaked. Hits on a
+// now-public page bounce to its /pub/ URL.
 func (s *server) handlePrivate(raw bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		p, ok := s.loadPage(w, r)
 		if !ok {
 			return
 		}
-		if _, loggedIn := s.sessionUser(r); !loggedIn {
+		u, loggedIn := s.sessionUser(r)
+		if !loggedIn {
 			if p.Public {
 				http.Redirect(w, r, "/pub/"+p.ID+suffix(raw), http.StatusFound)
 				return
 			}
 			http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.Path), http.StatusFound)
+			return
+		}
+		if p.UserID != u.ID {
+			if p.Public {
+				http.Redirect(w, r, "/pub/"+p.ID+suffix(raw), http.StatusFound)
+				return
+			}
+			http.NotFound(w, r)
 			return
 		}
 		s.servePage(w, p, raw)

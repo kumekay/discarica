@@ -167,6 +167,29 @@ func TestListPages(t *testing.T) {
 	}
 }
 
+func TestGetPageWithContent(t *testing.T) {
+	e := newEnv(t)
+	m := e.upload("notes.md", "# hello agent", nil)
+	id := m["id"].(string)
+
+	resp := e.call("GET", "/api/pages/"+id, "", nil, e.token)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("get: status %d", resp.StatusCode)
+	}
+	got := decode(t, resp)
+	if got["content"] != "# hello agent" || got["kind"] != "md" {
+		t.Errorf("unexpected page: %v", got)
+	}
+
+	// Another user's token cannot read it.
+	u2, _ := e.store.UpsertUser(t.Context(), "github", "2", "bob")
+	tok2, _ := e.store.ResetAPIToken(t.Context(), u2.ID)
+	resp = e.call("GET", "/api/pages/"+id, "", nil, tok2)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("foreign get: got %d, want 404", resp.StatusCode)
+	}
+}
+
 func TestVisibilityPatch(t *testing.T) {
 	e := newEnv(t)
 	m := e.upload("a.html", "<p>a</p>", nil)

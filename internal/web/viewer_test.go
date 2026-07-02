@@ -75,7 +75,7 @@ func TestPublicPageView(t *testing.T) {
 	}
 }
 
-func TestPrivatePageRequiresLogin(t *testing.T) {
+func TestPrivatePageOwnerOnly(t *testing.T) {
 	e := newEnv(t)
 	id := e.makePage("hi", "x.html", "<h1>secret</h1>", false)
 
@@ -88,13 +88,22 @@ func TestPrivatePageRequiresLogin(t *testing.T) {
 		t.Errorf("unexpected redirect: %q", loc)
 	}
 
-	// Any logged-in user (not just the owner) can view.
-	resp = e.get("/p/"+id, e.session())
+	// The owner can view.
+	resp = e.get("/p/"+id, e.ownerSession())
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("with session: status %d", resp.StatusCode)
+		t.Fatalf("owner session: status %d", resp.StatusCode)
 	}
 	if got := body(t, resp); got != "<h1>secret</h1>" {
 		t.Errorf("unexpected body: %q", got)
+	}
+
+	// A different logged-in user gets 404 — private means owner-only,
+	// and existence is not leaked.
+	for _, path := range []string{"/p/" + id, "/p/" + id + "/raw"} {
+		resp = e.get(path, e.session())
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("%s as non-owner: got %d, want 404", path, resp.StatusCode)
+		}
 	}
 }
 
@@ -103,11 +112,14 @@ func TestVisibilityPathRedirects(t *testing.T) {
 	pub := e.makePage("a", "a.html", "<p>a</p>", true)
 	priv := e.makePage("b", "b.html", "<p>b</p>", false)
 
-	// Public page fetched via /p/ works for logged-in users too — no redirect needed,
-	// but anonymous /p/ access to a public page should bounce to /pub/.
+	// /p/ access to a public page bounces to /pub/ for anyone but the owner.
 	resp := e.get("/p/"+pub, "")
 	if resp.StatusCode != http.StatusFound || resp.Header.Get("Location") != "/pub/"+pub {
 		t.Errorf("anon /p/ on public page: got %d -> %q", resp.StatusCode, resp.Header.Get("Location"))
+	}
+	resp = e.get("/p/"+pub, e.session())
+	if resp.StatusCode != http.StatusFound || resp.Header.Get("Location") != "/pub/"+pub {
+		t.Errorf("non-owner /p/ on public page: got %d -> %q", resp.StatusCode, resp.Header.Get("Location"))
 	}
 	// Private page via /pub/ redirects to the login-protected path.
 	resp = e.get("/pub/"+priv, "")

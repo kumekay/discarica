@@ -36,6 +36,10 @@ func Handler(st *store.Store, baseURL string) http.Handler {
 		Description: "List your uploaded pages.",
 	}, svc.listPages)
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "read_page",
+		Description: "Read one of your pages including its content (e.g. notes left by another agent).",
+	}, svc.readPage)
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "delete_page",
 		Description: "Delete an uploaded page.",
 	}, svc.deletePage)
@@ -143,6 +147,24 @@ func (s *service) listPages(ctx context.Context, _ *mcp.CallToolRequest, _ any) 
 
 type idIn struct {
 	ID string `json:"id" jsonschema:"page id"`
+}
+
+type readOut struct {
+	pageOut
+	Kind    string `json:"kind" jsonschema:"html or md"`
+	Content string `json:"content" jsonschema:"page content"`
+}
+
+func (s *service) readPage(ctx context.Context, _ *mcp.CallToolRequest, in idIn) (*mcp.CallToolResult, readOut, error) {
+	uid, err := userID(ctx)
+	if err != nil {
+		return nil, readOut{}, err
+	}
+	p, err := s.store.PageByID(ctx, in.ID)
+	if err != nil || p.UserID != uid {
+		return nil, readOut{}, errors.New("page not found")
+	}
+	return nil, readOut{pageOut: s.pageOut(p), Kind: p.Kind, Content: string(p.Content)}, nil
 }
 
 type okOut struct {
