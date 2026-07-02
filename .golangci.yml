@@ -11,6 +11,11 @@ linters:
     - misspell
     - noctx
     - bodyclose
+  exclusions:
+    rules:
+      # Test helpers close response bodies via t.Cleanup, which bodyclose cannot see.
+      - path: _test\.go
+        linters: [bodyclose]
 
 formatters:
   enable:
