@@ -70,6 +70,26 @@ CREATE TABLE IF NOT EXISTS sessions (
 	user_id    INTEGER NOT NULL REFERENCES users(id),
 	expires_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS oauth_clients (
+	id            TEXT PRIMARY KEY,
+	name          TEXT NOT NULL,
+	redirect_uris TEXT NOT NULL,
+	created_at    INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS oauth_codes (
+	code           TEXT PRIMARY KEY,
+	client_id      TEXT NOT NULL REFERENCES oauth_clients(id),
+	user_id        INTEGER NOT NULL REFERENCES users(id),
+	redirect_uri   TEXT NOT NULL,
+	code_challenge TEXT NOT NULL,
+	expires_at     INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS oauth_tokens (
+	token      TEXT PRIMARY KEY,
+	user_id    INTEGER NOT NULL REFERENCES users(id),
+	client_id  TEXT NOT NULL REFERENCES oauth_clients(id),
+	created_at INTEGER NOT NULL
+);
 `
 
 // Open opens (creating if needed) the SQLite database at path and applies the schema.
@@ -233,9 +253,12 @@ func (s *Store) GetOrCreateAPIToken(ctx context.Context, userID int64) (string, 
 	return token, nil
 }
 
-// UserByToken resolves an API bearer token to its user.
+// UserByToken resolves a bearer token — either a dashboard upload token or an
+// OAuth-issued MCP token — to its user.
 func (s *Store) UserByToken(ctx context.Context, token string) (User, error) {
-	return s.userBy(ctx, "id = (SELECT user_id FROM api_tokens WHERE token = ?)", token)
+	return s.userBy(ctx, `id IN (
+		SELECT user_id FROM api_tokens WHERE token = ?1
+		UNION SELECT user_id FROM oauth_tokens WHERE token = ?1)`, token)
 }
 
 // CreateSession issues a browser session token for the user.

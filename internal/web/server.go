@@ -60,6 +60,13 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /auth/{provider}", s.handleAuthStart)
 	mux.HandleFunc("GET /auth/{provider}/callback", s.handleAuthCallback)
 	mux.HandleFunc("POST /logout", s.handleLogout)
+
+	mux.HandleFunc("GET /.well-known/oauth-authorization-server", s.handleASMetadata)
+	mux.HandleFunc("GET /.well-known/oauth-protected-resource", s.handlePRMetadata)
+	mux.HandleFunc("POST /oauth/register", s.handleOAuthRegister)
+	mux.Handle("GET /oauth/authorize", s.withSession(s.handleAuthorizePage))
+	mux.Handle("POST /oauth/authorize", s.withSession(s.handleAuthorizeApprove))
+	mux.HandleFunc("POST /oauth/token", s.handleOAuthToken)
 	return mux
 }
 

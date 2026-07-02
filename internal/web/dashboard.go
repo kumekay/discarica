@@ -64,7 +64,8 @@ func (s *server) withSession(next func(http.ResponseWriter, *http.Request, store
 	return func(w http.ResponseWriter, r *http.Request) {
 		u, ok := s.sessionUser(r)
 		if !ok {
-			http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.Path), http.StatusFound)
+			// RequestURI keeps the query string so OAuth authorize params survive login.
+			http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
 			return
 		}
 		next(w, r, u)
