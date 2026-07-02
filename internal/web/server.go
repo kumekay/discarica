@@ -50,6 +50,12 @@ func New(cfg Config) http.Handler {
 	mux.Handle("GET /pub/{id}", s.handlePublic(false))
 	mux.Handle("GET /pub/{id}/raw", s.handlePublic(true))
 
+	mux.Handle("GET /dashboard", s.withSession(s.handleDashboard))
+	mux.Handle("POST /dashboard/token", s.withSession(s.handleTokenRefresh))
+	mux.Handle("POST /dashboard/pages/{id}/visibility", s.withSession(s.handleDashVisibility))
+	mux.Handle("POST /dashboard/pages/{id}/delete", s.withSession(s.handleDashDelete))
+	mux.Handle("GET /{$}", http.RedirectHandler("/dashboard", http.StatusFound))
+
 	mux.HandleFunc("GET /login", s.handleLoginPage)
 	mux.HandleFunc("GET /auth/{provider}", s.handleAuthStart)
 	mux.HandleFunc("GET /auth/{provider}/callback", s.handleAuthCallback)

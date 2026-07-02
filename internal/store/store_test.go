@@ -129,12 +129,21 @@ func TestAPIToken(t *testing.T) {
 	s := newStore(t)
 	u, _ := s.UpsertUser(t.Context(), "github", "1", "alice")
 
-	tok, err := s.ResetAPIToken(t.Context(), u.ID)
+	tok, err := s.GetOrCreateAPIToken(t.Context(), u.ID)
 	if err != nil {
-		t.Fatalf("reset token: %v", err)
+		t.Fatalf("get token: %v", err)
 	}
 	if len(tok) < 20 || tok[:4] != "dsc_" {
 		t.Errorf("unexpected token format: %q", tok)
+	}
+
+	// Stable until reset: the dashboard re-displays it.
+	again, err := s.GetOrCreateAPIToken(t.Context(), u.ID)
+	if err != nil {
+		t.Fatalf("get token again: %v", err)
+	}
+	if again != tok {
+		t.Errorf("token should be stable, got %q then %q", tok, again)
 	}
 
 	got, err := s.UserByToken(t.Context(), tok)

@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS pages (
 CREATE INDEX IF NOT EXISTS pages_user ON pages(user_id, created_at DESC);
 CREATE TABLE IF NOT EXISTS api_tokens (
 	user_id    INTEGER PRIMARY KEY REFERENCES users(id),
-	token_hash TEXT NOT NULL UNIQUE,
+	token      TEXT NOT NULL UNIQUE,
 	created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS sessions (
@@ -204,12 +204,29 @@ func (s *Store) mustAffect(res sql.Result, err error) error {
 }
 
 // ResetAPIToken issues a new upload token for the user, replacing any previous one.
+// The token is stored in plaintext so the dashboard can re-display it; the DB
+// also holds the pages it protects, so hashing it would not raise the stakes
+// of a DB compromise.
 func (s *Store) ResetAPIToken(ctx context.Context, userID int64) (string, error) {
 	token := "dsc_" + randomBase62(32)
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO api_tokens (user_id, token_hash, created_at) VALUES (?, ?, ?)
-		ON CONFLICT (user_id) DO UPDATE SET token_hash = excluded.token_hash, created_at = excluded.created_at`,
-		userID, hashToken(token), time.Now().Unix())
+		INSERT INTO api_tokens (user_id, token, created_at) VALUES (?, ?, ?)
+		ON CONFLICT (user_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at`,
+		userID, token, time.Now().Unix())
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
+// GetOrCreateAPIToken returns the user's current upload token, creating one on first use.
+func (s *Store) GetOrCreateAPIToken(ctx context.Context, userID int64) (string, error) {
+	var token string
+	err := s.db.QueryRowContext(ctx,
+		"SELECT token FROM api_tokens WHERE user_id = ?", userID).Scan(&token)
+	if errors.Is(err, sql.ErrNoRows) {
+		return s.ResetAPIToken(ctx, userID)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -218,7 +235,7 @@ func (s *Store) ResetAPIToken(ctx context.Context, userID int64) (string, error)
 
 // UserByToken resolves an API bearer token to its user.
 func (s *Store) UserByToken(ctx context.Context, token string) (User, error) {
-	return s.userBy(ctx, "id = (SELECT user_id FROM api_tokens WHERE token_hash = ?)", hashToken(token))
+	return s.userBy(ctx, "id = (SELECT user_id FROM api_tokens WHERE token = ?)", token)
 }
 
 // CreateSession issues a browser session token for the user.
