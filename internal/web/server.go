@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/kumekay/discarica/internal/auth"
 	"github.com/kumekay/discarica/internal/store"
 )
 
 type Config struct {
-	Store   *store.Store
-	BaseURL string // external base URL without trailing slash, e.g. https://discarica.kumekay.com
+	Store     *store.Store
+	BaseURL   string // external base URL without trailing slash, e.g. https://discarica.kumekay.com
+	Providers []*auth.Provider
 	// MaxUploadBytes caps page uploads; 0 means the 5 MiB default.
 	MaxUploadBytes int64
 }
@@ -22,7 +24,8 @@ type Config struct {
 const defaultMaxUploadBytes = 5 << 20
 
 type server struct {
-	cfg Config
+	cfg       Config
+	providers map[string]*auth.Provider
 }
 
 // New returns the root HTTP handler.
@@ -31,13 +34,21 @@ func New(cfg Config) http.Handler {
 		cfg.MaxUploadBytes = defaultMaxUploadBytes
 	}
 	cfg.BaseURL = strings.TrimSuffix(cfg.BaseURL, "/")
-	s := &server{cfg: cfg}
+	s := &server{cfg: cfg, providers: make(map[string]*auth.Provider)}
+	for _, p := range cfg.Providers {
+		s.providers[p.Name()] = p
+	}
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/pages", s.withToken(s.handleUploadPage))
 	mux.Handle("GET /api/pages", s.withToken(s.handleListPages))
 	mux.Handle("DELETE /api/pages/{id}", s.withToken(s.handleDeletePage))
 	mux.Handle("PATCH /api/pages/{id}", s.withToken(s.handlePatchPage))
+
+	mux.HandleFunc("GET /login", s.handleLoginPage)
+	mux.HandleFunc("GET /auth/{provider}", s.handleAuthStart)
+	mux.HandleFunc("GET /auth/{provider}/callback", s.handleAuthCallback)
+	mux.HandleFunc("POST /logout", s.handleLogout)
 	return mux
 }
 

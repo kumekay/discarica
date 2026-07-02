@@ -13,9 +13,10 @@ linters:
     - bodyclose
   exclusions:
     rules:
-      # Test helpers close response bodies via t.Cleanup, which bodyclose cannot see.
+      # Test helpers close response bodies via t.Cleanup, which bodyclose cannot
+      # see; context plumbing is irrelevant in test clients.
       - path: _test\.go
-        linters: [bodyclose]
+        linters: [bodyclose, noctx]
 
 formatters:
   enable:
