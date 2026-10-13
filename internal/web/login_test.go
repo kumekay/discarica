@@ -60,7 +60,8 @@ func (f *fakeIdP) provider(name, redirectURL string) *auth.Provider {
 	}, f.srv.URL+"/user", redirectURL)
 }
 
-// loginEnv wires an app server whose "github" provider is a fake IdP.
+// loginEnv wires an app server whose "github" and "forgejo" providers are
+// fake IdPs.
 func loginEnv(t *testing.T) (*httptest.Server, *store.Store, *http.Client) {
 	t.Helper()
 	s, err := store.Open(t.TempDir() + "/test.db")
@@ -70,14 +71,18 @@ func loginEnv(t *testing.T) (*httptest.Server, *store.Store, *http.Client) {
 	t.Cleanup(func() { _ = s.Close() })
 
 	idp := newFakeIdP(t, 7, "alice")
+	forge := newFakeIdP(t, 1, "ku")
 	var srv *httptest.Server
 	// The provider needs the app's callback URL, which we only know after
 	// starting the server, so wire it up via a placeholder-then-rewrite.
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		h := web.New(web.Config{
-			Store:     s,
-			BaseURL:   srv.URL,
-			Providers: []*auth.Provider{idp.provider("github", srv.URL+"/auth/github/callback")},
+			Store:   s,
+			BaseURL: srv.URL,
+			Providers: []*auth.Provider{
+				idp.provider("github", srv.URL+"/auth/github/callback"),
+				forge.provider("forgejo", srv.URL+"/auth/forgejo/callback"),
+			},
 		})
 		h.ServeHTTP(w, r)
 	}
@@ -185,6 +190,39 @@ func TestLoginPageListsProviders(t *testing.T) {
 	}
 	if !strings.Contains(string(body), "/auth/github") {
 		t.Error("login page should link to /auth/github")
+	}
+	// The forgejo route exists and is labelled for humans, not with the raw
+	// provider key.
+	if !strings.Contains(string(body), `/auth/forgejo?`) {
+		t.Errorf("login page should link to /auth/forgejo, got:\n%s", body)
+	}
+	if !strings.Contains(string(body), "Log in with Forgejo") {
+		t.Errorf("login page should say \"Log in with Forgejo\", got:\n%s", body)
+	}
+}
+
+func TestForgejoLoginFlow(t *testing.T) {
+	srv, s, client := loginEnv(t)
+
+	resp, err := client.Get(srv.URL + "/auth/forgejo?next=/dashboard")
+	if err != nil {
+		t.Fatalf("forgejo login: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if got := resp.Request.URL.Path; got != "/dashboard" {
+		t.Errorf("expected to land on /dashboard, got %s", got)
+	}
+
+	tok := sessionCookie(t, client, srv.URL)
+	if tok == "" {
+		t.Fatal("no session cookie set")
+	}
+	u, err := s.UserBySession(t.Context(), tok)
+	if err != nil {
+		t.Fatalf("session not valid: %v", err)
+	}
+	if u.Provider != "forgejo" || u.ProviderUID != "1" || u.Login != "ku" {
+		t.Errorf("unexpected user: %+v", u)
 	}
 }
 

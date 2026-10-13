@@ -24,7 +24,7 @@ var loginTmpl = template.Must(template.New("login").Parse(`<!doctype html>
 <p>Log in to view private pages and manage your uploads.</p>
 <ul>
 {{- range .Providers}}
-<li><a href="/auth/{{.}}?next={{$.Next}}">Log in with {{.}}</a></li>
+<li><a href="/auth/{{.Name}}?next={{$.Next}}">Log in with {{.Label}}</a></li>
 {{- end}}
 </ul>
 </body></html>`))
@@ -41,14 +41,21 @@ func safeNext(next string) string {
 	return defaultNextURL
 }
 
+// loginProvider is one row of the login page: the URL segment and the name
+// shown to the user.
+type loginProvider struct {
+	Name  string
+	Label string
+}
+
 func (s *server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
-	names := make([]string, 0, len(s.providers))
+	providers := make([]loginProvider, 0, len(s.cfg.Providers))
 	for _, p := range s.cfg.Providers {
-		names = append(names, p.Name())
+		providers = append(providers, loginProvider{Name: p.Name(), Label: p.Label()})
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = loginTmpl.Execute(w, map[string]any{
-		"Providers": names,
+		"Providers": providers,
 		"Next":      safeNext(r.FormValue("next")),
 	})
 }

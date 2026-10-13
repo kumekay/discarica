@@ -46,6 +46,13 @@ func main() {
 			slog.Warn("GITEA_CLIENT_ID set but GITEA_URL missing; gitea login disabled")
 		}
 	}
+	if id, secret := env("FORGEJO_CLIENT_ID"), env("FORGEJO_CLIENT_SECRET"); id != "" {
+		if forgejoURL := env("FORGEJO_URL"); forgejoURL != "" {
+			providers = append(providers, auth.Forgejo(forgejoURL, id, secret, baseURL+"/auth/forgejo/callback"))
+		} else {
+			slog.Warn("FORGEJO_CLIENT_ID set but FORGEJO_URL missing; forgejo login disabled")
+		}
+	}
 	if len(providers) == 0 {
 		slog.Warn("no OAuth providers configured; browser login is unavailable")
 	}

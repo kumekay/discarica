@@ -1,7 +1,7 @@
 # discarica
 
-Share HTML and Markdown pages via unguessable links. Users log in with GitHub or
-Gitea OAuth, get a bearer upload token, and push pages through the HTTP API or the
+Share HTML and Markdown pages via unguessable links. Users log in with GitHub,
+Gitea or Forgejo OAuth, get a bearer upload token, and push pages through the HTTP API or the
 MCP server at `/mcp`. Pages are private by default (`/p/{id}`, viewing requires
 login); public pages live under `/pub/{id}`. Deployed at
 https://discarica.kumekay.com.
@@ -27,7 +27,7 @@ https://discarica.kumekay.com.
 - `internal/store` — SQLite (modernc.org/sqlite, no CGO). Single DB file
   (`DB_PATH`). All secrets (session cookies, API tokens, OAuth codes/tokens) are
   stored **hashed** (SHA-256); plaintext exists only in the response that issues it.
-- `internal/auth` — OAuth2 login providers (GitHub, Gitea) behind a small
+- `internal/auth` — OAuth2 login providers (GitHub, Gitea, Forgejo) behind a small
   `Provider` interface; server-side sessions.
 - `internal/oauthsrv` — minimal OAuth 2.1 authorization server for MCP clients:
   dynamic client registration, `/oauth/authorize` (reuses browser session),

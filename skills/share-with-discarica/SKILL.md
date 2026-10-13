@@ -7,7 +7,7 @@ description: Share HTML or Markdown files as web pages via discarica and get bac
 
 discarica hosts HTML and Markdown pages behind unguessable links.
 Pages are **private** by default (visible only to their owner after
-GitHub/Gitea login); **public** pages are viewable by anyone with the link.
+GitHub/Gitea/Forgejo login); **public** pages are viewable by anyone with the link.
 Private pages are readable back through the API, so they work as a notes /
 handover space between agents of the same user.
 

@@ -1,7 +1,7 @@
 # discarica
 
-Share HTML and Markdown pages via unguessable links. Log in with GitHub or
-Gitea, grab your upload token, and let your AI agents (or scripts) push pages
+Share HTML and Markdown pages via unguessable links. Log in with GitHub, Gitea
+or Forgejo, grab your upload token, and let your AI agents (or scripts) push pages
 and get back sharable links. Pages are private by default (viewing requires
 login); opt a page into public to share it with anyone who has the link.
 
@@ -57,7 +57,7 @@ Running at **https://discarica.kumekay.com**.
 
 Agents can skip tokens entirely: connect to `https://discarica.kumekay.com/mcp`
 (streamable HTTP) and authenticate via OAuth — the login flow opens in the
-browser and uses the same GitHub/Gitea accounts. Tools: `upload_page`,
+browser and uses the same GitHub/Gitea/Forgejo accounts. Tools: `upload_page`,
 `list_pages`, `read_page`, `delete_page`, `set_visibility`. Since private
 pages are owner-only and readable back, they double as a handover space
 between agents of one user.
@@ -83,7 +83,7 @@ From a local checkout you can symlink instead:
 ## Security model
 
 - Pages are private by default: `/p/{id}` is visible only to its owner
-  (logged in via GitHub/Gitea); everyone else gets 404.
+  (logged in via GitHub, Gitea or Forgejo); everyone else gets 404.
 - Public pages (`/pub/{id}`) skip the login; their unguessable id is the only
   access control — possession of the link grants viewing.
 - Shared pages are served with `Content-Security-Policy: sandbox allow-scripts`,
@@ -101,15 +101,17 @@ DB_PATH=/data/discarica.db \
 GITHUB_CLIENT_ID=... GITHUB_CLIENT_SECRET=... \
 GITEA_URL=https://gitea.example.com \
 GITEA_CLIENT_ID=... GITEA_CLIENT_SECRET=... \
+FORGEJO_URL=https://forgejo.example.com \
+FORGEJO_CLIENT_ID=... FORGEJO_CLIENT_SECRET=... \
 go run ./cmd/discarica
 ```
 
-Register the OAuth apps with callback URLs
-`$BASE_URL/auth/github/callback` and `$BASE_URL/auth/gitea/callback`.
-Providers are optional — each is enabled when its credentials are set
-(Gitea also needs `GITEA_URL`). `BASE_URL` defaults to `http://localhost:8080`;
-`LISTEN_ADDR` (default `:8080`) and `MAX_UPLOAD_BYTES` (default 5 MiB) are
-also configurable.
+Register the OAuth apps with callback URLs `$BASE_URL/auth/github/callback`,
+`$BASE_URL/auth/gitea/callback` and `$BASE_URL/auth/forgejo/callback`.
+Providers are optional — each is enabled when its credentials are set, and the
+self-hosted ones additionally need `GITEA_URL` / `FORGEJO_URL`.
+`BASE_URL` defaults to `http://localhost:8080`; `LISTEN_ADDR` (default `:8080`)
+and `MAX_UPLOAD_BYTES` (default 5 MiB) are also configurable.
 
 ## License
 

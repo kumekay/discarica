@@ -1,6 +1,6 @@
-// Package auth implements OAuth2 login providers (GitHub, Gitea).
-// Both expose GitHub-compatible user endpoints returning {id, login},
-// so a single generic Provider covers them.
+// Package auth implements OAuth2 login providers (GitHub, Gitea, Forgejo).
+// All of them expose GitHub-compatible OAuth2 and user endpoints returning
+// {id, login}, so a single generic Provider covers them.
 package auth
 
 import (
@@ -23,15 +23,25 @@ type Identity struct {
 
 type Provider struct {
 	name    string
+	label   string
 	cfg     *oauth2.Config
 	userURL string
 }
 
+// labels are the provider names shown on the login page; unlisted names fall
+// back to the provider name itself.
+var labels = map[string]string{
+	"github":  "GitHub",
+	"gitea":   "Gitea",
+	"forgejo": "Forgejo",
+}
+
 // New builds a provider from raw OAuth2 endpoints; used directly only in tests,
-// production code uses GitHub and Gitea.
+// production code uses GitHub, Gitea and Forgejo.
 func New(name, clientID, clientSecret string, endpoint oauth2.Endpoint, userURL, redirectURL string) *Provider {
 	return &Provider{
-		name: name,
+		name:  name,
+		label: labels[name],
 		cfg: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
@@ -49,15 +59,35 @@ func GitHub(clientID, clientSecret, redirectURL string) *Provider {
 
 // Gitea returns a provider for a self-hosted Gitea at baseURL.
 func Gitea(baseURL, clientID, clientSecret, redirectURL string) *Provider {
+	return selfHosted("gitea", baseURL, clientID, clientSecret, redirectURL)
+}
+
+// Forgejo returns a provider for a self-hosted Forgejo at baseURL. Forgejo
+// forked Gitea and kept its OAuth2 and user API, so the endpoints are the same.
+func Forgejo(baseURL, clientID, clientSecret, redirectURL string) *Provider {
+	return selfHosted("forgejo", baseURL, clientID, clientSecret, redirectURL)
+}
+
+// selfHosted builds a provider for a Gitea-family forge (Gitea or Forgejo)
+// serving the standard OAuth2 and user API paths under baseURL.
+func selfHosted(name, baseURL, clientID, clientSecret, redirectURL string) *Provider {
 	base := strings.TrimSuffix(baseURL, "/")
 	endpoint := oauth2.Endpoint{
 		AuthURL:  base + "/login/oauth/authorize",
 		TokenURL: base + "/login/oauth/access_token",
 	}
-	return New("gitea", clientID, clientSecret, endpoint, base+"/api/v1/user", redirectURL)
+	return New(name, clientID, clientSecret, endpoint, base+"/api/v1/user", redirectURL)
 }
 
 func (p *Provider) Name() string { return p.name }
+
+// Label is the provider name as shown to users on the login page.
+func (p *Provider) Label() string {
+	if p.label != "" {
+		return p.label
+	}
+	return p.name
+}
 
 // AuthCodeURL returns the provider page to redirect the user to.
 func (p *Provider) AuthCodeURL(state string) string {

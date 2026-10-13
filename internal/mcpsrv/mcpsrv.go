@@ -99,7 +99,7 @@ type uploadIn struct {
 	Content string `json:"content" jsonschema:"page content (HTML or Markdown text)"`
 	Name    string `json:"name,omitempty" jsonschema:"display name; defaults to Untitled"`
 	Format  string `json:"format,omitempty" jsonschema:"html or md; defaults to html"`
-	Public  bool   `json:"public,omitempty" jsonschema:"true: anyone with the link can view; false (default): viewing requires GitHub/Gitea login"`
+	Public  bool   `json:"public,omitempty" jsonschema:"true: anyone with the link can view; false (default): viewing requires GitHub/Gitea/Forgejo login"`
 }
 
 func (s *service) uploadPage(ctx context.Context, _ *mcp.CallToolRequest, in uploadIn) (*mcp.CallToolResult, pageOut, error) {

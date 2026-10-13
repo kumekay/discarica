@@ -17,7 +17,7 @@ import (
 
 // Minimal OAuth 2.1 authorization server for MCP clients: dynamic client
 // registration, PKCE-only public clients, no scopes, no refresh tokens.
-// Authentication itself is delegated to the browser session (GitHub/Gitea).
+// Authentication itself is delegated to the browser session (GitHub/Gitea/Forgejo).
 
 const oauthCodeTTL = 5 * time.Minute
 
